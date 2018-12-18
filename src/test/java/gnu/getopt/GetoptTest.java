@@ -1,33 +1,27 @@
 package gnu.getopt;
 
-/*
- * This sample code was written by Aaron M. Renn and is a demonstration
- * of how to utilize some of the features of the GNU getopt package.  This
- * sample code is hereby placed into the public domain by the author and
- * may be used without restriction.
- */
+import org.junit.Test;
 
-public final class GetoptDemo {
-	public static void
-	main(final String[] argv) {
+public class GetoptTest {
+	@Test
+	public void testLongopt() {
+		final String[] argv = {"--help","--outputdir=/e/full", "--max", "theMax", "--o", "nonOpt1", "-bh","-W","maximum=MyArg"};
+
+		final int[] outputdirBuffer = new int[1];
+		final LongOpt[] longopts = {
+				new LongOpt("help", LongOpt.NO_ARGUMENT, null, 'h'),
+				new LongOpt("outputdir", LongOpt.REQUIRED_ARGUMENT, outputdirBuffer, 'o'),
+				new LongOpt("maximum", LongOpt.OPTIONAL_ARGUMENT, null, 2)
+		};
 		int c;
 		String arg;
-		final LongOpt[] longopts = new LongOpt[3];
-		//
-		final int[] outputDirVal = new int[1];
-		longopts[0] = new LongOpt("help", LongOpt.NO_ARGUMENT, null, 'h');
-		longopts[1] = new LongOpt("outputdir", LongOpt.REQUIRED_ARGUMENT, outputDirVal, 'o');
-		longopts[2] = new LongOpt("maximum", LongOpt.OPTIONAL_ARGUMENT, null, 2);
-		//
 		final Getopt g = new Getopt("testprog", argv, "-:bc::d:hW;", longopts);
-		g.setOpterr(false); // We'll do our own error handling
-		//
 		while ((c = g.getopt()) != -1) {
 			switch (c) {
 				case 0:
 					arg = g.getOptarg();
 					System.out.println("Got long option with value '" +
-							(char)outputDirVal[0]
+							(char)outputdirBuffer[0]
 							+ "' with argument " +
 							(arg != null ? arg : "null"));
 					break;
@@ -85,10 +79,6 @@ public final class GetoptDemo {
 		}
 		//
 		for (int i = g.getOptind(); i < argv.length; i++) { System.out.println("Non option argv element: " + argv[i] + "\n"); }
+
 	}
-
-	private GetoptDemo() {
-	}
-} // Class GetoptDemo
-
-
+}

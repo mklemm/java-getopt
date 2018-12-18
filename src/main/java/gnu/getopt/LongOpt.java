@@ -23,7 +23,6 @@ package gnu.getopt;
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
-/**************************************************************************/
 
 /**
  * This object represents the definition of a long option in the Java port
@@ -37,7 +36,6 @@ import java.util.ResourceBundle;
  * @see Getopt
  */
 public class LongOpt {
-/**************************************************************************/
 
 	/*
 	 * Class Variables
@@ -57,7 +55,6 @@ public class LongOpt {
 	 * value indicates that the option takes an argument that is optional.
 	 */
 	public static final int OPTIONAL_ARGUMENT = 2;
-/**************************************************************************/
 
 	/*
 	 * Instance Variables
@@ -70,13 +67,13 @@ public class LongOpt {
 	 * Indicates whether the option has no argument, a required argument, or
 	 * an optional argument.
 	 */
-	protected int has_arg;
+	int hasArg;
 	/**
 	 * If this variable is not null, then the value stored in "val" is stored
 	 * here when this long option is encountered.  If this is null, the value
 	 * stored in "val" is treated as the name of an equivalent short option.
 	 */
-	StringBuffer flag;
+	int[] flag;
 	/**
 	 * The value to store in "flag" if flag is not null, otherwise the
 	 * equivalent short option character for this long option.
@@ -85,40 +82,33 @@ public class LongOpt {
 	/**
 	 * Localized strings for error messages
 	 */
-	private final ResourceBundle _messages = ResourceBundle.getBundle(
-			"gnu/getopt/MessagesBundle", Locale.getDefault());
-/**************************************************************************/
-
-	/*
-	 * Constructors
-	 */
+	private final ResourceBundle messages = ResourceBundle.getBundle("gnu/getopt/MessagesBundle", Locale.getDefault());
 
 	/**
 	 * Create a new LongOpt object with the given parameter values.  If the
-	 * value passed as has_arg is not valid, then an exception is thrown.
+	 * value passed as hasArg is not valid, then an exception is thrown.
 	 *
 	 * @param name The long option String.
-	 * @param has_arg Indicates whether the option has no argument (NO_ARGUMENT), a required argument (REQUIRED_ARGUMENT) or an optional argument (OPTIONAL_ARGUMENT).
+	 * @param hasArg Indicates whether the option has no argument (NO_ARGUMENT), a required argument (REQUIRED_ARGUMENT) or an optional argument (OPTIONAL_ARGUMENT).
 	 * @param flag If non-null, this is a location to store the value of "val" when this option is encountered, otherwise "val" is treated as the equivalent short option character.
 	 * @param val The value to return for this long option, or the equivalent single letter option to emulate if flag is null.
-	 * @exception IllegalArgumentException If the has_arg param is not one of NO_ARGUMENT, REQUIRED_ARGUMENT or OPTIONAL_ARGUMENT.
+	 * @exception IllegalArgumentException If the hasArg param is not one of NO_ARGUMENT, REQUIRED_ARGUMENT or OPTIONAL_ARGUMENT.
 	 */
-	public LongOpt(final String name, final int has_arg,
-			final StringBuffer flag, final int val) throws IllegalArgumentException {
-		// Validate has_arg
-		if (has_arg != LongOpt.NO_ARGUMENT && has_arg != LongOpt.REQUIRED_ARGUMENT
-				&& has_arg != LongOpt.OPTIONAL_ARGUMENT) {
-			final Object[] msgArgs = {Integer.toString(has_arg)};
+	public LongOpt(final String name, final int hasArg,
+			final int[] flag, final int val) throws IllegalArgumentException {
+		// Validate hasArg
+		if (hasArg != LongOpt.NO_ARGUMENT && hasArg != LongOpt.REQUIRED_ARGUMENT
+				&& hasArg != LongOpt.OPTIONAL_ARGUMENT) {
+			final Object[] msgArgs = {Integer.toString(hasArg)};
 			throw new IllegalArgumentException(MessageFormat.format(
-					this._messages.getString("getopt.invalidValue"), msgArgs));
+					this.messages.getString("getopt.invalidValue"), msgArgs));
 		}
 		// Store off values
 		this.name = name;
-		this.has_arg = has_arg;
+		this.hasArg = hasArg;
 		this.flag = flag;
 		this.val = val;
 	}
-/**************************************************************************/
 	/**
 	 * Returns the name of this LongOpt as a String
 	 *
@@ -128,7 +118,7 @@ public class LongOpt {
 	getName() {
 		return this.name;
 	}
-/**************************************************************************/
+
 	/**
 	 * Returns the value set for the 'has_arg' field for this long option
 	 *
@@ -136,15 +126,15 @@ public class LongOpt {
 	 */
 	public int
 	getHasArg() {
-		return this.has_arg;
+		return this.hasArg;
 	}
-/**************************************************************************/
+
 	/**
 	 * Returns the value of the 'flag' field for this long option
 	 *
 	 * @return The value of 'flag'
 	 */
-	public StringBuffer
+	public int[]
 	getFlag() {
 		return this.flag;
 	}
@@ -158,6 +148,4 @@ public class LongOpt {
 	getVal() {
 		return this.val;
 	}
-/**************************************************************************/
-} // Class LongOpt
-
+}
