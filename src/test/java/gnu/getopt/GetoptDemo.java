@@ -19,7 +19,7 @@ public final class GetoptDemo {
 		longopts[1] = new LongOpt("outputdir", LongOpt.REQUIRED_ARGUMENT, outputDirVal, 'o');
 		longopts[2] = new LongOpt("maximum", LongOpt.OPTIONAL_ARGUMENT, null, 2);
 		//
-		final Getopt g = new Getopt("testprog", argv, "-:bc::d:hW;", longopts);
+		final Getopt g = Getopt.createGnu("testprog", argv, "-:bc::d:hW;", longopts);
 		g.setOpterr(false); // We'll do our own error handling
 		//
 		while ((c = g.getopt()) != -1) {

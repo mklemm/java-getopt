@@ -3,6 +3,7 @@ package gnu.getopt;
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
+import java.util.function.BiFunction;
 
 /**
  * This is a Java port of GNU getopt, a class for parsing command line
@@ -385,6 +386,11 @@ public class Getopt {
 	 */
 	private static final int RETURN_IN_ORDER = 3;
 
+	private static final String DEF_NAME_VALUE_SEPARATOR = "=";
+	private static final String DEF_LONG_OPTION_PREFIX = "--";
+	private static final String DEF_NON_OPTION_SEPARATOR = "--";
+	private static final String DEF_OPTION_PREFIX_STR = "-";
+
 	/*
 	 * Instance Variables
 	 */
@@ -482,10 +488,18 @@ public class Getopt {
 	 */
 	private ResourceBundle messages = ResourceBundle.getBundle("gnu/getopt/MessagesBundle", Locale.getDefault());
 
+	private final String nameValueSeparator;
+	private final String longOptionPrefix;
+	private final String nonOptionSeparator;
+	private final char optionPrefix;
+	private final String optionPrefixStr;
+	private final BiFunction<String,String,Boolean> nameEqualsFunction;
+	private final BiFunction<String,String,Boolean> nameStartsWIthFunction;
+	private final BiFunction<String,Integer,Integer> indexOfFunction;
+
 	/*
 	 * Constructors
 	 */
-
 	/**
 	 * Construct a basic Getopt instance with the given input data.  Note that
 	 * this handles "short" options only.
@@ -494,8 +508,8 @@ public class Getopt {
 	 * @param argv The String array passed as the command line to the program.
 	 * @param optstring A String containing a description of the valid args for this program
 	 */
-	public Getopt(final String progname, final String[] argv, final String optstring) {
-		this(progname, argv, optstring, null, false);
+	public static Getopt createGnu(final String progname, final String[] argv, final String optstring) {
+		return new Getopt(progname, argv, optstring, null, false, Getopt.DEF_OPTION_PREFIX_STR, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
 	}
 
 	/**
@@ -507,9 +521,35 @@ public class Getopt {
 	 * @param optstring A String containing a description of the valid short args for this program
 	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
 	 */
-	public Getopt(final String progname, final String[] argv, final String optstring,
+	public static Getopt createGnu(final String progname, final String[] argv, final String optstring,
 			final LongOpt... longOptions) {
-		this(progname, argv, optstring, longOptions, false);
+		return new Getopt(progname, argv, optstring, longOptions, false, Getopt.DEF_OPTION_PREFIX_STR, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+	}
+
+	/**
+	 * Construct a Getopt instance with given input data that is capable of
+	 * parsing long options as well as short.
+	 *
+	 * @param progname The name to display as the program name when printing errors
+	 * @param argv The String array passed as the command ilne to the program
+	 * @param optstring A String containing a description of the valid short args for this program
+	 * @param longOnly true if long options that do not conflict with short options can start with a '-' as well as '--'
+	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
+	 */
+	public static Getopt createGnu(final String progname, final String[] argv, final String optstring, final boolean longOnly,
+			final LongOpt... longOptions) {
+		return new Getopt(progname, argv, optstring, longOptions, longOnly, Getopt.DEF_OPTION_PREFIX_STR, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+	}
+
+
+	public static Getopt createMsDos(final String progname, final String[] argv, final String optstring,
+			final LongOpt... longOptions) {
+		return new Getopt(progname, argv, optstring, longOptions, true, "/", "//", ":", true);
+	}
+
+	public static Getopt createMsPowerShell(final String progname, final String[] argv, final String optstring,
+			final LongOpt... longOptions) {
+		return new Getopt(progname, argv, optstring, longOptions, true, "-", "--", "=", true);
 	}
 
 	/**
@@ -527,7 +567,21 @@ public class Getopt {
 	 * @param longOnly true if long options that do not conflict with short options can start with a '-' as well as '--'
 	 */
 	public Getopt(final String progname, final String[] argv, String optstring,
-			final LongOpt[] longOptions, final boolean longOnly) {
+			final LongOpt[] longOptions, final boolean longOnly, final String optionPrefixStr, final String longOptionPrefix, final String nameValueSeparator, final boolean ignoreOptionCase) {
+		this.optionPrefixStr = optionPrefixStr;
+		this.optionPrefix = optionPrefixStr.charAt(0);
+		this.longOptionPrefix = longOptionPrefix;
+		this.nameValueSeparator = nameValueSeparator;
+		if(ignoreOptionCase) {
+			this.nameEqualsFunction = String::equalsIgnoreCase;
+			this.nameStartsWIthFunction = (a,b) -> a.toLowerCase().startsWith(b.toLowerCase());
+			this.indexOfFunction = (s,c) -> s.toLowerCase().indexOf(Character.toLowerCase(c));
+		} else {
+			this.nameEqualsFunction = String::equals;
+			this.nameStartsWIthFunction = String::startsWith;
+			this.indexOfFunction = String::indexOf;
+		}
+		this.nonOptionSeparator = Getopt.DEF_NON_OPTION_SEPARATOR;
 		if (optstring.length() == 0) { optstring = " "; }
 		// This function is essentially _getopt_initialize from GNU getopt
 		this.progname = progname;
@@ -721,12 +775,12 @@ public class Getopt {
 		ambig = false;
 		exact = false;
 		this.longind = -1;
-		nameend = this.nextchar.indexOf("=");
+		nameend = this.nextchar.indexOf(this.nameValueSeparator);
 		if (nameend == -1) { nameend = this.nextchar.length(); }
 		// Test all lnog options for either exact match or abbreviated matches
 		for (int i = 0; i < this.longOptions.length; i++) {
-			if (this.longOptions[i].getName().startsWith(this.nextchar.substring(0, nameend))) {
-				if (this.longOptions[i].getName().equals(this.nextchar.substring(0, nameend))) {
+			if (this.nameStartsWIthFunction.apply(this.longOptions[i].getName(), this.nextchar.substring(0, nameend))) {
+				if (this.nameEqualsFunction.apply(this.longOptions[i].getName(), this.nextchar.substring(0, nameend))) {
 					// Exact match found
 					pfound = this.longOptions[i];
 					this.longind = i;
@@ -763,7 +817,7 @@ public class Getopt {
 				} else {
 					if (this.opterr) {
 						// -- option
-						if (this.argumentVector[this.optind - 1].startsWith("--")) {
+						if (this.argumentVector[this.optind - 1].startsWith(this.longOptionPrefix)) {
 							final Object[] msgArgs = {this.progname, pfound.name};
 							System.err.println(MessageFormat.format(
 									this.messages.getString("getopt.arguments1"),
@@ -840,7 +894,7 @@ public class Getopt {
 				// Skip any additional non-options
 				// and extend the range of non-options previously skipped.
 				while (this.optind < this.argumentVector.length && (this.argumentVector[this.optind].equals("") ||
-						this.argumentVector[this.optind].charAt(0) != '-' || this.argumentVector[this.optind].equals("-"))) {
+						this.argumentVector[this.optind].charAt(0) != this.optionPrefix || this.argumentVector[this.optind].equals(this.optionPrefixStr))) {
 					this.optind++;
 				}
 				this.lastNonopt = this.optind;
@@ -849,7 +903,7 @@ public class Getopt {
 			// Skip it like a null option,
 			// then exchange with previous non-options as if it were an option,
 			// then skip everything else like a non-option.
-			if (this.optind != this.argumentVector.length && this.argumentVector[this.optind].equals("--")) {
+			if (this.optind != this.argumentVector.length && this.argumentVector[this.optind].equals(this.nonOptionSeparator)) {
 				this.optind++;
 				if (this.firstNonopt != this.lastNonopt && this.lastNonopt != this.optind) { exchange(this.argumentVector); } else if (this.firstNonopt == this.lastNonopt) { this.firstNonopt = this.optind; }
 				this.lastNonopt = this.argumentVector.length;
@@ -865,15 +919,15 @@ public class Getopt {
 			}
 			// If we have come to a non-option and did not permute it,
 			// either stop the scan or describe it to the caller and pass it by.
-			if (this.argumentVector[this.optind].equals("") || this.argumentVector[this.optind].charAt(0) != '-' ||
-					this.argumentVector[this.optind].equals("-")) {
+			if (this.argumentVector[this.optind].equals("") || this.argumentVector[this.optind].charAt(0) != this.optionPrefix ||
+					this.argumentVector[this.optind].equals(this.optionPrefixStr)) {
 				if (this.ordering == Getopt.REQUIRE_ORDER) { return -1; }
 				this.optarg = this.argumentVector[this.optind++];
 				return 1;
 			}
 			// We have found another option-ARGV-element.
 			// Skip the initial punctuation.
-			if (this.argumentVector[this.optind].startsWith("--")) {
+			if (this.argumentVector[this.optind].startsWith(this.longOptionPrefix)) {
 				this.nextchar = this.argumentVector[this.optind].substring(2);
 			} else {
 				this.nextchar = this.argumentVector[this.optind].substring(1);
@@ -893,19 +947,21 @@ public class Getopt {
      the long option, just like "--fu", and not "-f" with arg "u".
 
      This distinction seems to be the most useful approach.  */
-		if (this.longOptions != null && (this.argumentVector[this.optind].startsWith("--")
+		if (this.longOptions != null && (this.argumentVector[this.optind].startsWith(this.longOptionPrefix)
 				|| this.longOnly && (this.argumentVector[this.optind].length() > 2 ||
-				this.optstring.indexOf(this.argumentVector[this.optind].charAt(1)) == -1))) {
+				indexOf(this.argumentVector[this.optind].charAt(1)) == -1))) {
 			final int c = checkLongOption();
-			if (this.longoptHandled) { return c; }
+			if (this.longoptHandled) {
+				return c;
+			}
 			// Can't find it as a long option.  If this is not getopt_long_only,
 			// or the option starts with '--' or is not a valid short
 			// option, then it's an error.
 			// Otherwise interpret it as a short option.
-			if (!this.longOnly || this.argumentVector[this.optind].startsWith("--")
-					|| this.optstring.indexOf(this.nextchar.charAt(0)) == -1) {
+			if (!this.longOnly || this.argumentVector[this.optind].startsWith(this.longOptionPrefix)
+					|| indexOf(this.nextchar.charAt(0)) == -1) {
 				if (this.opterr) {
-					if (this.argumentVector[this.optind].startsWith("--")) {
+					if (this.argumentVector[this.optind].startsWith(this.longOptionPrefix)) {
 						final Object[] msgArgs = {this.progname, this.nextchar};
 						System.err.println(MessageFormat.format(
 								this.messages.getString("getopt.unrecognized"),
@@ -928,7 +984,11 @@ public class Getopt {
 		int c = this.nextchar.charAt(0); //**** Do we need to check for empty str?
 		if (this.nextchar.length() > 1) { this.nextchar = this.nextchar.substring(1); } else { this.nextchar = ""; }
 		String temp = null;
-		if (this.optstring.indexOf(c) != -1) { temp = this.optstring.substring(this.optstring.indexOf(c)); }
+		final int charIndex = indexOf(c);
+		if (charIndex != -1) {
+			temp = this.optstring.substring(charIndex);
+			c = this.optstring.charAt(charIndex); // Use canonical char just in case the case-insensitive match is enabled.
+		}
 		if (this.nextchar.equals("")) { ++this.optind; }
 		if (temp == null || c == ':') {
 			if (this.opterr) {
@@ -971,7 +1031,7 @@ public class Getopt {
 		}
 		if (temp.length() > 1 && temp.charAt(1) == ':') {
 			if (temp.length() > 2 && temp.charAt(2) == ':')
-			// This is an option that accepts and argument optionally
+			// This is an option that accepts an argument optionally
 			{
 				if (!this.nextchar.equals("")) {
 					this.optarg = this.nextchar;
@@ -993,7 +1053,7 @@ public class Getopt {
 					// we get -o -- foo, then we're supposed to skip the --,
 					// end parsing of options, and make foo an operand to -o.
 					// Only do this in Posix mode.
-					if (this.posixlyCorrect && this.optarg.equals("--")) {
+					if (this.posixlyCorrect && this.optarg.equals(this.nonOptionSeparator)) {
 						// If end of argv, error out
 						if (this.optind == this.argumentVector.length) {
 							return handleOptErr(c);
@@ -1012,6 +1072,10 @@ public class Getopt {
 			}
 		}
 		return c;
+	}
+
+	private Integer indexOf(final int c) {
+		return this.indexOfFunction.apply(this.optstring, c);
 	}
 
 	private int handleOptErr(final int c) {

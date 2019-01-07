@@ -84,6 +84,7 @@ public class LongOpt {
 	 */
 	private final ResourceBundle messages = ResourceBundle.getBundle("gnu/getopt/MessagesBundle", Locale.getDefault());
 
+
 	/**
 	 * Create a new LongOpt object with the given parameter values.  If the
 	 * value passed as hasArg is not valid, then an exception is thrown.
@@ -148,4 +149,5 @@ public class LongOpt {
 	getVal() {
 		return this.val;
 	}
+
 }
