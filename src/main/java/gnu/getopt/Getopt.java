@@ -389,7 +389,7 @@ public class Getopt {
 	private static final String DEF_NAME_VALUE_SEPARATOR = "=";
 	private static final String DEF_LONG_OPTION_PREFIX = "--";
 	private static final String DEF_NON_OPTION_SEPARATOR = "--";
-	private static final String DEF_OPTION_PREFIX_STR = "-";
+	private static final char DEF_SHORT_OPTION_PREFIX = '-';
 
 	/*
 	 * Instance Variables
@@ -493,8 +493,9 @@ public class Getopt {
 	private final String nonOptionSeparator;
 	private final char optionPrefix;
 	private final String optionPrefixStr;
+	private final boolean ignoreOptionCase;
 	private final BiFunction<String,String,Boolean> nameEqualsFunction;
-	private final BiFunction<String,String,Boolean> nameStartsWIthFunction;
+	private final BiFunction<String,String,Boolean> nameStartsWithFunction;
 	private final BiFunction<String,Integer,Integer> indexOfFunction;
 
 	/*
@@ -509,7 +510,7 @@ public class Getopt {
 	 * @param optstring A String containing a description of the valid args for this program
 	 */
 	public static Getopt createGnu(final String progname, final String[] argv, final String optstring) {
-		return new Getopt(progname, argv, optstring, null, false, Getopt.DEF_OPTION_PREFIX_STR, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+		return new Getopt(progname, argv, optstring, null, false, Getopt.DEF_SHORT_OPTION_PREFIX, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
 	}
 
 	/**
@@ -523,7 +524,7 @@ public class Getopt {
 	 */
 	public static Getopt createGnu(final String progname, final String[] argv, final String optstring,
 			final LongOpt... longOptions) {
-		return new Getopt(progname, argv, optstring, longOptions, false, Getopt.DEF_OPTION_PREFIX_STR, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+		return new Getopt(progname, argv, optstring, longOptions, false, Getopt.DEF_SHORT_OPTION_PREFIX, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
 	}
 
 	/**
@@ -538,18 +539,18 @@ public class Getopt {
 	 */
 	public static Getopt createGnu(final String progname, final String[] argv, final String optstring, final boolean longOnly,
 			final LongOpt... longOptions) {
-		return new Getopt(progname, argv, optstring, longOptions, longOnly, Getopt.DEF_OPTION_PREFIX_STR, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+		return new Getopt(progname, argv, optstring, longOptions, longOnly, Getopt.DEF_SHORT_OPTION_PREFIX, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
 	}
 
 
 	public static Getopt createMsDos(final String progname, final String[] argv, final String optstring,
 			final LongOpt... longOptions) {
-		return new Getopt(progname, argv, optstring, longOptions, true, "/", "//", ":", true);
+		return new Getopt(progname, argv, optstring, longOptions, true, '/', "//", ":", true);
 	}
 
 	public static Getopt createMsPowerShell(final String progname, final String[] argv, final String optstring,
 			final LongOpt... longOptions) {
-		return new Getopt(progname, argv, optstring, longOptions, true, "-", "--", "=", true);
+		return new Getopt(progname, argv, optstring, longOptions, true, '-', "--", "=", true);
 	}
 
 	/**
@@ -567,18 +568,19 @@ public class Getopt {
 	 * @param longOnly true if long options that do not conflict with short options can start with a '-' as well as '--'
 	 */
 	public Getopt(final String progname, final String[] argv, String optstring,
-			final LongOpt[] longOptions, final boolean longOnly, final String optionPrefixStr, final String longOptionPrefix, final String nameValueSeparator, final boolean ignoreOptionCase) {
-		this.optionPrefixStr = optionPrefixStr;
-		this.optionPrefix = optionPrefixStr.charAt(0);
+			final LongOpt[] longOptions, final boolean longOnly, final char shortOptionPrefix, final String longOptionPrefix, final String nameValueSeparator, final boolean ignoreOptionCase) {
+		this.optionPrefixStr = new String(new char[] {shortOptionPrefix});
+		this.optionPrefix = shortOptionPrefix;
 		this.longOptionPrefix = longOptionPrefix;
 		this.nameValueSeparator = nameValueSeparator;
+		this.ignoreOptionCase = ignoreOptionCase;
 		if(ignoreOptionCase) {
 			this.nameEqualsFunction = String::equalsIgnoreCase;
-			this.nameStartsWIthFunction = (a,b) -> a.toLowerCase().startsWith(b.toLowerCase());
+			this.nameStartsWithFunction = (a,b) -> a.toLowerCase().startsWith(b.toLowerCase());
 			this.indexOfFunction = (s,c) -> s.toLowerCase().indexOf(Character.toLowerCase(c));
 		} else {
 			this.nameEqualsFunction = String::equals;
-			this.nameStartsWIthFunction = String::startsWith;
+			this.nameStartsWithFunction = String::startsWith;
 			this.indexOfFunction = String::indexOf;
 		}
 		this.nonOptionSeparator = Getopt.DEF_NON_OPTION_SEPARATOR;
@@ -713,6 +715,26 @@ public class Getopt {
 		return this.longind;
 	}
 
+	public String getNameValueSeparator() {
+		return this.nameValueSeparator;
+	}
+
+	public String getLongOptionPrefix() {
+		return this.longOptionPrefix;
+	}
+
+	public String getNonOptionSeparator() {
+		return this.nonOptionSeparator;
+	}
+
+	public char getOptionPrefix() {
+		return this.optionPrefix;
+	}
+
+	public boolean isIgnoreOptionCase() {
+		return this.ignoreOptionCase;
+	}
+
 	/**
 	 * Exchange the shorter segment with the far end of the longer segment.
 	 * That puts the shorter segment into the right place.
@@ -779,7 +801,7 @@ public class Getopt {
 		if (nameend == -1) { nameend = this.nextchar.length(); }
 		// Test all lnog options for either exact match or abbreviated matches
 		for (int i = 0; i < this.longOptions.length; i++) {
-			if (this.nameStartsWIthFunction.apply(this.longOptions[i].getName(), this.nextchar.substring(0, nameend))) {
+			if (this.nameStartsWithFunction.apply(this.longOptions[i].getName(), this.nextchar.substring(0, nameend))) {
 				if (this.nameEqualsFunction.apply(this.longOptions[i].getName(), this.nextchar.substring(0, nameend))) {
 					// Exact match found
 					pfound = this.longOptions[i];
