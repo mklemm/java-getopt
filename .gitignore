@@ -1,7 +1,7 @@
 target
+*.iml
+.idea
 .*
 !.gitignore
 *~
 *.bak
-*.iml
-.idea

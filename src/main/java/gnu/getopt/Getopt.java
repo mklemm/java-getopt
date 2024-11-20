@@ -518,7 +518,7 @@ public class Getopt {
 	 * parsing long options as well as short.
 	 *
 	 * @param progname The name to display as the program name when printing errors
-	 * @param argv The String array passed as the command ilne to the program
+	 * @param argv The String array passed as the command line to the program
 	 * @param optstring A String containing a description of the valid short args for this program
 	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
 	 */
@@ -532,7 +532,7 @@ public class Getopt {
 	 * parsing long options as well as short.
 	 *
 	 * @param progname The name to display as the program name when printing errors
-	 * @param argv The String array passed as the command ilne to the program
+	 * @param argv The String array passed as the command line to the program
 	 * @param optstring A String containing a description of the valid short args for this program
 	 * @param longOnly true if long options that do not conflict with short options can start with a '-' as well as '--'
 	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
@@ -562,7 +562,37 @@ public class Getopt {
 	 * conflict with a short option name.
 	 *
 	 * @param progname The name to display as the program name when printing errors
-	 * @param argv The String array passed as the command ilne to the program
+	 * @param argv The String array passed as the command line to the program
+	 * @param optstring A String containing a description of the valid short args for this program
+	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
+	 * @param longOnly true if long options that do not conflict with short options can start with a '-' as well as '--'
+	 */
+	public Getopt(final String progname, final String[] argv, final String optstring, final LongOpt[] longOptions, final boolean longOnly) {
+		this(progname, argv, optstring, longOptions, longOnly, Getopt.DEF_SHORT_OPTION_PREFIX, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+	}
+
+	/**
+	 * Construct a Getopt instance with given input data that is capable of
+	 * parsing long options and short options.
+	 * @param progname The name to display as the program name when printing errors
+	 * @param argv The String array passed as the command line to the program
+	 * @param optstring A String containing a description of the valid short args for this program
+	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
+	 */
+	public Getopt(final String progname, final String[] argv, final String optstring, final LongOpt... longOptions) {
+		this(progname, argv, optstring, longOptions, false, Getopt.DEF_SHORT_OPTION_PREFIX, Getopt.DEF_LONG_OPTION_PREFIX, Getopt.DEF_NAME_VALUE_SEPARATOR, false);
+	}
+
+	/**
+	 * Construct a Getopt instance with given input data that is capable of
+	 * parsing long options and short options.  Contrary to what you might
+	 * think, the flag 'long_only' does not determine whether or not we
+	 * scan for only long arguments.  Instead, a value of true here allows
+	 * long arguments to start with a '-' instead of '--' unless there is a
+	 * conflict with a short option name.
+	 *
+	 * @param progname The name to display as the program name when printing errors
+	 * @param argv The String array passed as the command line to the program
 	 * @param optstring A String containing a description of the valid short args for this program
 	 * @param longOptions An array of LongOpt objects that describes the valid long args for this program
 	 * @param longOnly true if long options that do not conflict with short options can start with a '-' as well as '--'
