@@ -2,29 +2,152 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>gnu.getopt</groupId>
+  <groupId>net.codesup.util</groupId>
   <artifactId>java-getopt</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>jar</packaging>
 
   <name>java-getopt</name>
-  <url>http://maven.apache.org</url>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-    <properties>
+  <description>Java port of the GNU getopt command line argument parser.</description>
+  <url>https://github.com/mklemm/java-getopt</url>
+  <licenses>
+    <license>
+      <name>GNU Library General Public License, version 2 or later</name>
+      <url>https://www.gnu.org/licenses/old-licenses/lgpl-2.0.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>mklemm</id>
+      <name>Mirko Klemm</name>
+      <email>mklemm@codesup.net</email>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://github.com/mklemm/java-getopt.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/mklemm/java-getopt.git</developerConnection>
+    <url>https://github.com/mklemm/java-getopt</url>
+  </scm>
+
+  <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <properties>
+        <!-- Maven deploy stages locally; JReleaser performs the remote publication. -->
+        <altDeploymentRepository>local::file:${project.build.directory}/staging-deploy</altDeploymentRepository>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+              <execution>
+                <id>require-release-version</id>
+                <goals><goal>enforce</goal></goals>
+                <configuration>
+                  <rules>
+                    <requireReleaseVersion/>
+                    <requireReleaseDeps/>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals><goal>jar-no-fork</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <configuration>
+              <!-- The upstream Java 8 documentation predates modern doclint. -->
+              <doclint>none</doclint>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals><goal>jar</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>3.1.4</version>
+          </plugin>
+          <plugin>
+            <groupId>org.jreleaser</groupId>
+            <artifactId>jreleaser-maven-plugin</artifactId>
+            <!-- Keep signing and credential handling aligned with kotlin-sourcemodel. -->
+            <version>1.20.0</version>
+            <inherited>false</inherited>
+            <configuration>
+              <jreleaser>
+                <release>
+                  <!-- Central-only publication does not need a GitHub release or token. -->
+                  <generic>
+                    <enabled>true</enabled>
+                    <skipTag>true</skipTag>
+                    <skipRelease>true</skipRelease>
+                    <!-- JReleaser 1.20 requires a nonempty token even when Git releases are skipped. -->
+                    <token>unused</token>
+                  </generic>
+                </release>
+                <signing>
+                  <active>ALWAYS</active>
+                  <armored>true</armored>
+                  <mode>FILE</mode>
+                  <publicKey>${user.home}/.gnupg/public.pgp</publicKey>
+                  <secretKey>${user.home}/.gnupg/private.pgp</secretKey>
+                </signing>
+                <deploy>
+                  <maven>
+                    <mavenCentral>
+                      <sonatype>
+                        <active>RELEASE</active>
+                        <url>https://central.sonatype.com/api/v1/publisher</url>
+                        <stagingRepositories>${project.build.directory}/staging-deploy</stagingRepositories>
+                      </sonatype>
+                    </mavenCentral>
+                  </maven>
+                </deploy>
+              </jreleaser>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <dependencies>
     <dependency>
